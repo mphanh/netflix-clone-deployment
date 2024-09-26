@@ -28,17 +28,50 @@ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 
-#install node exporter
-sudo useradd \
-    --system \
-    --no-create-home \
-    --shell /bin/false node_exporter
-wget https://github.com/prometheus/node_exporter/releases/download/v1.6.1/node_exporter-1.6.1.linux-amd64.tar.gz
-tar -xvf node_exporter-1.6.1.linux-amd64.tar.gz
-sudo mv \
-  node_exporter-1.6.1.linux-amd64/node_exporter \
-  /usr/local/bin/
-rm -rf node_exporter*
-node_exporter --version
-sudo systemctl enable node_exporter
+# Install Node Exporter
+NODE_EXPORTER_VERSION="1.6.1"
+echo "Downloading Node Exporter $NODE_EXPORTER_VERSION..."
+cd /tmp
+wget https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz
+
+echo "Extracting Node Exporter..."
+tar -xvf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz
+cd node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64
+
+echo "Copying Node Exporter binary..."
+sudo cp node_exporter /usr/local/bin/
+
+# Create Node Exporter user
+echo "Creating Node Exporter user..."
+sudo useradd --no-create-home --shell /bin/false node_exporter
+
+# Create Node Exporter systemd service
+echo "Creating Node Exporter systemd service..."
+sudo bash -c 'cat <<EOF > /etc/systemd/system/node_exporter.service
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+Type=simple
+ExecStart=/usr/local/bin/node_exporter \
+    --collector.logind
+
+[Install]
+WantedBy=multi-user.target
+EOF'
+
+# Reload systemd and start Node Exporter
+echo "Reloading systemd and starting Node Exporter..."
+sudo systemctl daemon-reload
 sudo systemctl start node_exporter
+sudo systemctl enable node_exporter
+
+# Print Prometheus and Node Exporter status
+echo "Installation complete. Checking status of Node Exporter..."
+sudo systemctl status node_exporter --no-pager
+
+echo "Node Exporter is running on port 9100."
