@@ -1,0 +1,44 @@
+global:
+  scrape_interval: 15s  # How often to scrape targets by default
+  evaluation_interval: 15s  # How often to evaluate rules
+
+  # Optional: Label to be added to any time series scraped from the local Prometheus instance
+  external_labels:
+    monitor: 'my-prometheus'
+
+# Alertmanager configuration (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+#        - targets: ['localhost:9093']  # Replace with Alertmanager's address
+
+# Rule files for alerts (optional)
+rule_files:
+#  - "alert.rules"
+
+# Optional: Add additional targets (e.g., Docker, Kubernetes) by adding more job blocks like node_exporter
+
+scrape_configs:
+  - job_name: 'prometheus'
+    # The scrape target (Prometheus server itself)
+    static_configs:
+      - targets: ['localhost:9090']  # Address of Prometheus server
+
+  # Example of adding another job (target) for scraping metrics
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['localhost:9100']  # Replace with node_exporter endpoint
+  - job_name: 'jenkins'
+    metrics_path: '/prometheus'
+    static_configs:
+      - targets: ['<jenkins-ip>:8080']
+    - job_name: node_export_masterk8s
+    static_configs:
+      - targets: ["<master-ip>:9100"]
+
+  - job_name: node_export_workerk8s
+    static_configs:
+      - targets: ["<worker-ip>:9100"]
+  
+
+
